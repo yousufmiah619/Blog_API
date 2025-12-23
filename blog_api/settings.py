@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'blogs',
     'rest_framework.authtoken',
     'accounts',
@@ -133,6 +134,7 @@ MEDIA_ROOT=BASE_DIR /'media'
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),  # 86400 sec
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),   # 86400 sec
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
