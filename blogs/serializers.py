@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Post, Like, Bookmark
+from .models import Post,Category,Comment, Like, Bookmark
 
 class PostCreateUpdateSerializer(serializers.ModelSerializer):
     category_ids = serializers.ListField(
@@ -113,3 +113,97 @@ class PostListSerializer(serializers.ModelSerializer):
         if user.is_anonymous:
             return False
         return obj.bookmarks.filter(user=user).exists()
+
+
+class CategoryListSerializer(serializers.ModelSerializer):
+    count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = [
+            'id',
+            'name',
+            'slug',
+            'description',
+            'count',
+            'image'
+        ]
+
+    def get_count(self, obj):
+        return Post.objects.filter(categories=obj).count()
+
+
+class CategoryDetailSerializer(serializers.ModelSerializer):
+    count = serializers.SerializerMethodField()
+    parent = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = [
+            'id',
+            'name',
+            'slug',
+            'description',
+            'count',
+            'parent',
+            'image'
+        ]
+
+    def get_count(self, obj):
+        return Post.objects.filter(categories=obj).count()
+
+    def get_parent(self, obj):
+        return obj.parent.id if obj.parent else 0
+
+
+class CommentAuthorSerializer(serializers.ModelSerializer):
+    avatar = serializers.SerializerMethodField()
+    name = serializers.CharField(source='get_full_name')
+
+    class Meta:
+        model = User
+        fields = ['id', 'name', 'avatar']
+
+    def get_avatar(self, obj):
+        return None
+    
+class ReplySerializer(serializers.ModelSerializer):
+    author = CommentAuthorSerializer(source='user', read_only=True)
+    likes_count = serializers.IntegerField(default=0)
+    is_liked = serializers.BooleanField(default=False)
+
+    class Meta:
+        model = Comment
+        fields = [
+            'id',
+            'post',
+            'user',
+            'parent',
+            'content',
+            'likes_count',
+            'created_at',
+            'author',
+            'is_liked'
+        ]
+
+class CommentSerializer(serializers.ModelSerializer):
+    author = CommentAuthorSerializer(source='user', read_only=True)
+    replies = ReplySerializer(many=True, read_only=True)
+    likes_count = serializers.IntegerField(default=0)
+    is_liked = serializers.BooleanField(default=False)
+
+    class Meta:
+        model = Comment
+        fields = [
+            'id',
+            'post',
+            'user',
+            'parent',
+            'content',
+            'likes_count',
+            'created_at',
+            'updated_at',
+            'author',
+            'replies',
+            'is_liked'
+        ]
