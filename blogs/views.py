@@ -3,10 +3,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from .models import Post,Category,Comment
+from .models import Post,Category,Comment,Like
 from rest_framework.permissions import AllowAny
 from django.core.paginator import Paginator
-from .serializers import PostCreateUpdateSerializer,PostListSerializer,CategoryListSerializer,CategoryDetailSerializer,CommentSerializer
+from .serializers import PostCreateUpdateSerializer,PostListSerializer,CategoryListSerializer,CategoryDetailSerializer,CommentSerializer,LikedPostSerializer
 
 class PostCreateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -242,4 +242,100 @@ class DeleteCommentView(APIView):
             "success": True,
             "message": "Comment deleted successfully",
             "data": None
+        })
+
+class LikePostView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, post_id):
+        post = get_object_or_404(Post, id=post_id)
+
+        like, created = Like.objects.get_or_create(
+            user=request.user,
+            post=post
+        )
+
+        if not created:
+            return Response({
+                "success": False,
+                "message": "Post already liked",
+                "data": {
+                    "likes_count": post.likes.count(),
+                    "is_liked": True
+                }
+            }, status=400)
+
+        return Response({
+            "success": True,
+            "message": "Post liked successfully",
+            "data": {
+                "likes_count": post.likes.count(),
+                "is_liked": True
+            }
+        })
+
+class UnlikePostView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, post_id):
+        post = get_object_or_404(Post, id=post_id)
+
+        like = Like.objects.filter(user=request.user, post=post).first()
+        if not like:
+            return Response({
+                "success": False,
+                "message": "Post not liked yet",
+                "data": {
+                    "likes_count": post.likes.count(),
+                    "is_liked": False
+                }
+            }, status=400)
+
+        like.delete()
+
+        return Response({
+            "success": True,
+            "message": "Post unliked successfully",
+            "data": {
+                "likes_count": post.likes.count(),
+                "is_liked": False
+            }
+        })
+
+class PostLikesCountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, post_id):
+        post = get_object_or_404(Post, id=post_id)
+
+        is_liked = Like.objects.filter(
+            user=request.user,
+            post=post
+        ).exists()
+
+        return Response({
+            "success": True,
+            "message": "Likes count retrieved successfully",
+            "data": {
+                "likes_count": post.likes.count(),
+                "is_liked": is_liked
+            }
+        })
+
+class UserLikedPostsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        liked_posts = Post.objects.filter(
+            likes__user=request.user
+        ).distinct()
+
+        serializer = LikedPostSerializer(liked_posts, many=True)
+
+        return Response({
+            "success": True,
+            "message": "Liked posts retrieved successfully",
+            "data": {
+                "liked_posts": serializer.data
+            }
         })

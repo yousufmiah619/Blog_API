@@ -207,3 +207,8 @@ class CommentSerializer(serializers.ModelSerializer):
             'replies',
             'is_liked'
         ]
+
+class LikedPostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Post
+        fields = ['id', 'title', 'excerpt', 'featured_image', 'created_at']
